@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../services/supabase";
+import { useNavigate } from "react-router-dom";
 
 
 export default function Dashboard() {
@@ -7,6 +8,7 @@ export default function Dashboard() {
   const [scores, setScores] = useState([]);
   const [winnings, setWinnings] = useState([]);
   const [subscription, setSubscription] = useState(null);
+  const navigate = useNavigate();
 
   // ❤️ Charity states
   const [charity, setCharity] = useState("");
@@ -154,7 +156,16 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-black text-white p-6">
-      <h1 className="text-3xl mb-6">Dashboard</h1>
+     <div className="flex justify-between items-center mb-6">
+  <h1 className="text-3xl">Dashboard</h1>
+
+  <button
+    onClick={() => navigate("/admin")}
+    className="bg-red-500 px-4 py-2 rounded font-bold"
+  >
+    Admin Panel ⚙️
+  </button>
+</div>
 
       {/* Add Score */}
       <div className="bg-gray-900 p-4 rounded-xl mb-6">
