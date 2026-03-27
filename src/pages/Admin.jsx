@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../services/supabase";
+import { useNavigate } from "react-router-dom";
 
 export default function Admin() {
   const [scores, setScores] = useState([]);
   const [winnings, setWinnings] = useState([]);
+  const navigate = useNavigate();
 
   // ✅ Fetch all scores
   const fetchScores = async () => {
@@ -68,7 +70,7 @@ export default function Admin() {
           user_id: userId,
           match_count: matches,
           amount: matches * 100,
-          status: "pending", // ✅ important
+          status: "pending", // default pending
         });
       }
     }
@@ -86,13 +88,36 @@ export default function Admin() {
     fetchWinnings();
   };
 
+  // 🔓 Logout
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/login");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-purple-900 to-black text-white p-6">
       <div className="max-w-5xl mx-auto">
 
-        <h1 className="text-4xl font-bold mb-6 text-center">
-          👨‍💼 Admin Panel
-        </h1>
+        {/* 🔥 HEADER */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-4xl font-bold">👨‍💼 Admin Panel</h1>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="bg-blue-500 px-4 py-2 rounded font-bold hover:scale-105 transition"
+            >
+              ⬅ Dashboard
+            </button>
+
+            <button
+              onClick={handleLogout}
+              className="bg-red-500 px-4 py-2 rounded font-bold hover:scale-105 transition"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
 
         {/* 🎲 Run Draw */}
         <div className="text-center mb-6">
@@ -118,7 +143,11 @@ export default function Admin() {
                 key={s.id}
                 className="border-b border-gray-700 py-2"
               >
-                User: {s.user_id} | Score: {s.score}
+                <span className="text-gray-300">
+                  User: {s.user_id}
+                </span>{" "}
+                | Score:{" "}
+                <span className="font-bold">{s.score}</span>
               </div>
             ))
           )}
@@ -139,16 +168,19 @@ export default function Admin() {
                 className="border-b border-gray-700 py-2 flex justify-between items-center"
               >
                 <div>
-                  User: {w.user_id} | Matches: {w.match_count} | ₹
-                  {w.amount}
+                  <span className="text-gray-300">
+                    User: {w.user_id}
+                  </span>{" "}
+                  | Matches: {w.match_count} | ₹{" "}
+                  <span className="font-bold">{w.amount}</span>
                 </div>
 
-                <div>
+                <div className="flex items-center gap-3">
                   <span
                     className={
                       w.status === "paid"
-                        ? "text-green-400"
-                        : "text-yellow-400"
+                        ? "text-green-400 font-bold"
+                        : "text-yellow-400 font-bold"
                     }
                   >
                     {w.status || "pending"}
@@ -157,7 +189,7 @@ export default function Admin() {
                   {w.status !== "paid" && (
                     <button
                       onClick={() => markAsPaid(w.id)}
-                      className="ml-3 bg-green-500 px-3 py-1 rounded text-sm"
+                      className="bg-green-500 px-3 py-1 rounded text-sm hover:scale-105 transition"
                     >
                       Mark Paid
                     </button>
@@ -172,3 +204,4 @@ export default function Admin() {
     </div>
   );
 }
+

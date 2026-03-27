@@ -2,29 +2,51 @@ import { useEffect, useState } from "react";
 import { supabase } from "../services/supabase";
 import { useNavigate } from "react-router-dom";
 
-
 export default function Dashboard() {
   const [score, setScore] = useState("");
   const [scores, setScores] = useState([]);
   const [winnings, setWinnings] = useState([]);
   const [subscription, setSubscription] = useState(null);
+  const [loading, setLoading] = useState(true);
+
   const navigate = useNavigate();
 
-  // ❤️ Charity states
   const [charity, setCharity] = useState("");
   const [savedCharity, setSavedCharity] = useState(null);
+
+  const checkSubscription = async () => {
+  const user = (await supabase.auth.getUser()).data.user;
+
+  if (!user) {
+    navigate("/login");
+    return;
+  }
+
+  const { data } = await supabase
+    .from("subscriptions")
+    .select("*")
+    .eq("user_id", user.id);
+
+  if (data && data.length > 0) {
+    setSubscription(data[0]); // ✅ take first
+  } else {
+    setSubscription(null);
+  }
+
+  setLoading(false);
+};
 
   // Fetch scores
   const fetchScores = async () => {
     const user = (await supabase.auth.getUser()).data.user;
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("scores")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    if (!error) setScores(data);
+    setScores(data || []);
   };
 
   // Fetch winnings
@@ -40,7 +62,7 @@ export default function Dashboard() {
     setWinnings(data || []);
   };
 
-  // ❤️ Fetch charity
+  // Fetch charity
   const fetchCharity = async () => {
     const user = (await supabase.auth.getUser()).data.user;
 
@@ -48,16 +70,43 @@ export default function Dashboard() {
       .from("charity_selection")
       .select("*")
       .eq("user_id", user.id)
-      .maybeSingle(); // safer than single()
+      .maybeSingle();
 
     setSavedCharity(data);
   };
 
   useEffect(() => {
+    checkSubscription();
     fetchScores();
     fetchWinnings();
-    fetchCharity(); // 👈 added
+    fetchCharity();
   }, []);
+
+  // ⏳ Loading screen
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex justify-center items-center">
+        <h1 className="text-2xl">Loading...</h1>
+      </div>
+    );
+  }
+
+  // 🔒 Block if not subscribed
+  if (!subscription) {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col justify-center items-center">
+        <h1 className="text-3xl mb-4">Access Restricted 🔒</h1>
+        <p>You need an active subscription to use dashboard</p>
+
+        <button
+          onClick={() => navigate("/subscribe")}
+          className="mt-6 bg-blue-500 px-6 py-2 rounded"
+        >
+          Go to Subscription 💳
+        </button>
+      </div>
+    );
+  }
 
   // Add score
   const addScore = async () => {
@@ -87,27 +136,22 @@ export default function Dashboard() {
     fetchScores();
   };
 
-  // 🎲 Generate draw numbers
+  // Draw logic
   const generateDraw = () => {
     let numbers = [];
-
     while (numbers.length < 5) {
       let num = Math.floor(Math.random() * 45) + 1;
       if (!numbers.includes(num)) numbers.push(num);
     }
-
     return numbers;
   };
 
-  // 🧠 Check matches
   const checkMatches = (userScores, drawNumbers) => {
     return userScores.filter((s) => drawNumbers.includes(s)).length;
   };
 
-  // 🚀 Run Draw
   const runDraw = async () => {
     const drawNumbers = generateDraw();
-
     alert("Draw Numbers: " + drawNumbers.join(", "));
 
     const { data } = await supabase.from("scores").select("*");
@@ -115,9 +159,7 @@ export default function Dashboard() {
     let userMap = {};
 
     data.forEach((item) => {
-      if (!userMap[item.user_id]) {
-        userMap[item.user_id] = [];
-      }
+      if (!userMap[item.user_id]) userMap[item.user_id] = [];
       userMap[item.user_id].push(item.score);
     });
 
@@ -136,7 +178,7 @@ export default function Dashboard() {
     fetchWinnings();
   };
 
-  // ❤️ Save charity
+  // Save charity
   const saveCharity = async () => {
     if (!charity) {
       alert("Please select a charity");
@@ -156,16 +198,17 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-black text-white p-6">
-     <div className="flex justify-between items-center mb-6">
-  <h1 className="text-3xl">Dashboard</h1>
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl">Dashboard</h1>
 
-  <button
-    onClick={() => navigate("/admin")}
-    className="bg-red-500 px-4 py-2 rounded font-bold"
-  >
-    Admin Panel ⚙️
-  </button>
-</div>
+        <button
+          onClick={() => navigate("/admin")}
+          className="bg-red-500 px-4 py-2 rounded font-bold"
+        >
+          Admin Panel ⚙️
+        </button>
+      </div>
 
       {/* Add Score */}
       <div className="bg-gray-900 p-4 rounded-xl mb-6">
@@ -187,7 +230,7 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* Score List */}
+      {/* Scores */}
       <div className="bg-gray-900 p-4 rounded-xl">
         <h2 className="mb-3">Your Last 5 Scores</h2>
 
@@ -195,10 +238,7 @@ export default function Dashboard() {
           <p>No scores yet</p>
         ) : (
           scores.map((s) => (
-            <div
-              key={s.id}
-              className="border-b border-gray-700 py-2 flex justify-between"
-            >
+            <div key={s.id} className="border-b border-gray-700 py-2 flex justify-between">
               <span>Score: {s.score}</span>
               <span className="text-gray-400 text-sm">
                 {new Date(s.created_at).toLocaleDateString()}
@@ -208,7 +248,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* 🎲 Run Draw Button */}
+      {/* Draw */}
       <div className="mt-6 text-center">
         <button
           onClick={runDraw}
@@ -218,7 +258,7 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* 🏆 Winnings Section */}
+      {/* Winnings */}
       <div className="bg-gray-900 p-4 rounded-xl mt-6">
         <h2 className="mb-3">Your Winnings 🏆</h2>
 
@@ -226,20 +266,15 @@ export default function Dashboard() {
           <p>No winnings yet</p>
         ) : (
           winnings.map((w) => (
-            <div
-              key={w.id}
-              className="border-b border-gray-700 py-2 flex justify-between"
-            >
+            <div key={w.id} className="border-b border-gray-700 py-2 flex justify-between">
               <span>Matches: {w.match_count}</span>
-              <span className="text-green-400 font-bold">
-                ₹ {w.amount}
-              </span>
+              <span className="text-green-400 font-bold">₹ {w.amount}</span>
             </div>
           ))
         )}
       </div>
 
-      {/* ❤️ Charity Section */}
+      {/* Charity */}
       <div className="bg-gray-900 p-4 rounded-xl mt-6">
         <h2 className="mb-3">Support a Charity ❤️</h2>
 
@@ -253,10 +288,7 @@ export default function Dashboard() {
           <option value="Food For All">Food For All</option>
         </select>
 
-        <button
-          onClick={saveCharity}
-          className="bg-green-500 px-4 py-2 rounded"
-        >
+        <button onClick={saveCharity} className="bg-green-500 px-4 py-2 rounded">
           Save
         </button>
 
