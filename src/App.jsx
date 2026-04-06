@@ -4,6 +4,7 @@ import Admin from "./pages/Admin";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Subscription from "./pages/Subscription";
+import AdminLogin from "./pages/AdminLogin";
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
@@ -17,6 +18,7 @@ function App() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/subscribe" element={<Subscription />} />
+        <Route path="/admin-login" element={<AdminLogin />} />
       </Routes>
   );
 }

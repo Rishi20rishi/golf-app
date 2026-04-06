@@ -9,34 +9,35 @@ export default function Dashboard() {
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const navigate = useNavigate();
-
   const [charity, setCharity] = useState("");
   const [savedCharity, setSavedCharity] = useState(null);
 
+  const navigate = useNavigate();
+
+  // ✅ CHECK SUBSCRIPTION
   const checkSubscription = async () => {
-  const user = (await supabase.auth.getUser()).data.user;
+    const user = (await supabase.auth.getUser()).data.user;
 
-  if (!user) {
-    navigate("/login");
-    return;
-  }
+    if (!user) {
+      navigate("/login");
+      return;
+    }
 
-  const { data } = await supabase
-    .from("subscriptions")
-    .select("*")
-    .eq("user_id", user.id);
+    const { data } = await supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", user.id);
 
-  if (data && data.length > 0) {
-    setSubscription(data[0]); // ✅ take first
-  } else {
-    setSubscription(null);
-  }
+    if (data && data.length > 0) {
+      setSubscription(data[0]);
+    } else {
+      setSubscription(null);
+    }
 
-  setLoading(false);
-};
+    setLoading(false);
+  };
 
-  // Fetch scores
+  // ✅ FETCH DATA
   const fetchScores = async () => {
     const user = (await supabase.auth.getUser()).data.user;
 
@@ -49,7 +50,6 @@ export default function Dashboard() {
     setScores(data || []);
   };
 
-  // Fetch winnings
   const fetchWinnings = async () => {
     const user = (await supabase.auth.getUser()).data.user;
 
@@ -62,7 +62,6 @@ export default function Dashboard() {
     setWinnings(data || []);
   };
 
-  // Fetch charity
   const fetchCharity = async () => {
     const user = (await supabase.auth.getUser()).data.user;
 
@@ -75,32 +74,41 @@ export default function Dashboard() {
     setSavedCharity(data);
   };
 
+  // ✅ FORCE FULL BLACK BACKGROUND (FIX ALL WHITE/BLUE ISSUES)
   useEffect(() => {
     checkSubscription();
     fetchScores();
     fetchWinnings();
     fetchCharity();
+
+    document.body.style.background = "#000000";
+    document.documentElement.style.background = "#000000";
+
+    return () => {
+      document.body.style.background = "";
+      document.documentElement.style.background = "";
+    };
   }, []);
 
-  // ⏳ Loading screen
+  // ⏳ LOADING
   if (loading) {
     return (
       <div className="min-h-screen bg-black text-white flex justify-center items-center">
-        <h1 className="text-2xl">Loading...</h1>
+        <h1 className="text-2xl animate-pulse">Loading...</h1>
       </div>
     );
   }
 
-  // 🔒 Block if not subscribed
+  // ❌ NO SUBSCRIPTION
   if (!subscription) {
     return (
       <div className="min-h-screen bg-black text-white flex flex-col justify-center items-center">
         <h1 className="text-3xl mb-4">Access Restricted 🔒</h1>
-        <p>You need an active subscription to use dashboard</p>
+        <p>You need an active subscription</p>
 
         <button
           onClick={() => navigate("/subscribe")}
-          className="mt-6 bg-blue-500 px-6 py-2 rounded"
+          className="mt-6 bg-blue-500 px-6 py-2 rounded hover:scale-105 transition"
         >
           Go to Subscription 💳
         </button>
@@ -108,7 +116,7 @@ export default function Dashboard() {
     );
   }
 
-  // Add score
+  // ➕ ADD SCORE
   const addScore = async () => {
     if (!score || score < 1 || score > 45) {
       alert("Enter valid score (1-45)");
@@ -136,7 +144,7 @@ export default function Dashboard() {
     fetchScores();
   };
 
-  // Draw logic
+  // 🎲 DRAW LOGIC
   const generateDraw = () => {
     let numbers = [];
     while (numbers.length < 5) {
@@ -152,7 +160,7 @@ export default function Dashboard() {
 
   const runDraw = async () => {
     const drawNumbers = generateDraw();
-    alert("Draw Numbers: " + drawNumbers.join(", "));
+    alert("🎲 Draw Numbers: " + drawNumbers.join(", "));
 
     const { data } = await supabase.from("scores").select("*");
 
@@ -178,10 +186,10 @@ export default function Dashboard() {
     fetchWinnings();
   };
 
-  // Save charity
+  // ❤️ SAVE CHARITY
   const saveCharity = async () => {
     if (!charity) {
-      alert("Please select a charity");
+      alert("Select a charity");
       return;
     }
 
@@ -196,23 +204,15 @@ export default function Dashboard() {
     fetchCharity();
   };
 
+  // 🎨 UI
   return (
-    <div className="min-h-screen bg-black text-white p-6">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl">Dashboard</h1>
+    <div className="min-h-screen w-full bg-black text-white p-6">
 
-        <button
-          onClick={() => navigate("/admin")}
-          className="bg-red-500 px-4 py-2 rounded font-bold"
-        >
-          Admin Panel ⚙️
-        </button>
-      </div>
+      <h1 className="text-3xl mb-6 font-bold">Dashboard</h1>
 
-      {/* Add Score */}
-      <div className="bg-gray-900 p-4 rounded-xl mb-6">
-        <h2 className="mb-2">Add Score</h2>
+      {/* ➕ Add Score */}
+      <div className="bg-gray-900 p-4 rounded-xl mb-6 shadow-lg">
+        <h2 className="mb-2 text-lg font-semibold">Add Score</h2>
 
         <input
           type="number"
@@ -224,21 +224,24 @@ export default function Dashboard() {
 
         <button
           onClick={addScore}
-          className="bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-2 rounded"
+          className="bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-2 rounded hover:scale-105 transition"
         >
           Add
         </button>
       </div>
 
-      {/* Scores */}
-      <div className="bg-gray-900 p-4 rounded-xl">
-        <h2 className="mb-3">Your Last 5 Scores</h2>
+      {/* 📊 Scores */}
+      <div className="bg-gray-900 p-4 rounded-xl shadow-lg">
+        <h2 className="mb-3 text-lg font-semibold">Your Last 5 Scores</h2>
 
         {scores.length === 0 ? (
           <p>No scores yet</p>
         ) : (
           scores.map((s) => (
-            <div key={s.id} className="border-b border-gray-700 py-2 flex justify-between">
+            <div
+              key={s.id}
+              className="border-b border-gray-700 py-2 flex justify-between"
+            >
               <span>Score: {s.score}</span>
               <span className="text-gray-400 text-sm">
                 {new Date(s.created_at).toLocaleDateString()}
@@ -248,35 +251,42 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Draw */}
+      {/* 🎲 Draw */}
       <div className="mt-6 text-center">
         <button
           onClick={runDraw}
-          className="bg-yellow-500 px-6 py-2 rounded text-black font-bold"
+          className="bg-yellow-500 px-6 py-2 rounded text-black font-bold hover:scale-105 transition"
         >
           Run Draw 🎲
         </button>
       </div>
 
-      {/* Winnings */}
-      <div className="bg-gray-900 p-4 rounded-xl mt-6">
-        <h2 className="mb-3">Your Winnings 🏆</h2>
+      {/* 🏆 Winnings */}
+      <div className="bg-gray-900 p-4 rounded-xl mt-6 shadow-lg">
+        <h2 className="mb-3 text-lg font-semibold">Your Winnings 🏆</h2>
 
         {winnings.length === 0 ? (
           <p>No winnings yet</p>
         ) : (
           winnings.map((w) => (
-            <div key={w.id} className="border-b border-gray-700 py-2 flex justify-between">
+            <div
+              key={w.id}
+              className="border-b border-gray-700 py-2 flex justify-between"
+            >
               <span>Matches: {w.match_count}</span>
-              <span className="text-green-400 font-bold">₹ {w.amount}</span>
+              <span className="text-green-400 font-bold">
+                ₹ {w.amount}
+              </span>
             </div>
           ))
         )}
       </div>
 
-      {/* Charity */}
-      <div className="bg-gray-900 p-4 rounded-xl mt-6">
-        <h2 className="mb-3">Support a Charity ❤️</h2>
+      {/* ❤️ Charity */}
+      <div className="bg-gray-900 p-4 rounded-xl mt-6 shadow-lg">
+        <h2 className="mb-3 text-lg font-semibold">
+          Support a Charity ❤️
+        </h2>
 
         <select
           onChange={(e) => setCharity(e.target.value)}
@@ -288,7 +298,10 @@ export default function Dashboard() {
           <option value="Food For All">Food For All</option>
         </select>
 
-        <button onClick={saveCharity} className="bg-green-500 px-4 py-2 rounded">
+        <button
+          onClick={saveCharity}
+          className="bg-green-500 px-4 py-2 rounded hover:scale-105 transition"
+        >
           Save
         </button>
 
